@@ -271,6 +271,7 @@ public class NetworkImageView extends ImageView {
                 setImageBitmap(bitmap);
             }
         });
+
     }
 
     @Override
