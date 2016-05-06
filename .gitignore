@@ -13,5 +13,4 @@ local.properties
 bin/
 gen/
 *.DS_Store
-volley/
 .idea/workspace.xml
