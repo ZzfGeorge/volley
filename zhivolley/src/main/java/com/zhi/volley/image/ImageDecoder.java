@@ -10,6 +10,7 @@ import android.support.annotation.Nullable;
 import android.support.annotation.WorkerThread;
 
 import com.zhi.volley.image.gif.GifDecoder;
+import com.zhi.volley.uti.Logs;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -48,6 +49,8 @@ public class ImageDecoder {
             newRequest.containers.add(decodeContainer);
             mDecodeQueue.add(newRequest);
             mInFlights.put(model.cacheKey, newRequest);
+
+            Logs.d("zhi", "Start a new request %1d", newRequest.hashCode() % 1000);
         }
         return decodeContainer;
     }
@@ -78,6 +81,10 @@ public class ImageDecoder {
             }
         }
 
+        public void pauseRequest() {
+            visible = false;
+        }
+
         public void resumeRequest() {
             visible = true;
             DecodeRequest request = mInFlights.get(model.cacheKey);
@@ -86,9 +93,16 @@ public class ImageDecoder {
                 request.containers.add(this);
                 mDecodeQueue.add(request);
                 mInFlights.put(model.cacheKey, request);
+                Logs.d("zhi", "Resume with a new request %1d - %2$d", request.hashCode(), hashCode() % 1000);
 
-            } else if (!request.containers.contains(this)) {
-                request.containers.add(this);
+            } else {
+                if (!request.containers.contains(this)) {
+                    request.containers.add(this);
+                }
+                if (!mDecodeQueue.mQueue.contains(request)) {
+                    mDecodeQueue.add(request);
+                    Logs.d("zhi", "Resume with a request %1d - %2$d", request.hashCode(), hashCode() % 1000);
+                }
             }
         }
     }
@@ -126,10 +140,14 @@ public class ImageDecoder {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    for (DecodeContainer container : containers) {
+                    final int size = containers.size();
+                    for (int i = size - 1; i >= 0; i--) {
+                        final DecodeContainer container = containers.get(i);
                         container.bitmap = bitmap;
                         if (container.visible) {
                             container.listener.onResponse(bitmap, frame, count);
+                        } else {
+                            containers.remove(container);
                         }
                     }
                 }
@@ -195,7 +213,7 @@ public class ImageDecoder {
                 decoder.advance();
 
                 final Bitmap bitmap = decoder.getNextFrame();
-                if (bitmap == null) {
+                if (bitmap == null || request.isCanceled()) {
                     request.finish();
                     continue;
                 }

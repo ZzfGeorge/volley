@@ -267,7 +267,11 @@ public class NetworkImageView extends ImageView {
             @Override
             public void onResponse(@NonNull Bitmap bitmap, int frame, int count) {
                 // Here, first set is permit.
-                mDecodeContainer.visible = isShown();
+                if (!isShown()) {
+                    mDecodeContainer.pauseRequest();
+                }
+//                Logs.d("zhi", "view(%1$d - %2$d - %3$d : %4$d), ",
+//                        NetworkImageView.this.hashCode() % 1000, mDecodeContainer.hashCode() % 1000, hashCode() % 1000, frame);
                 setImageBitmap(bitmap);
             }
         });
